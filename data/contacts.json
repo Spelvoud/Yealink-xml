@@ -1,0 +1,10 @@
+[
+    {"name": "Receptie", "group": "Algemeen", "numbers": {"intern": "100"}},
+    {"name": "Storingsdienst", "group": "Algemeen", "numbers": {"intern": "199", "extern": "+31 20 123 4599"}},
+    {"name": "Anna de Vries", "group": "Verkoop", "numbers": {"intern": "201", "mobiel": "+31 6 12345678"}},
+    {"name": "Bram Jansen", "group": "Verkoop", "numbers": {"intern": "202"}},
+    {"name": "Chantal Bakker", "group": "Support", "numbers": {"intern": "301", "mobiel": "+31 6 23456789"}},
+    {"name": "Daan Visser", "group": "Support", "numbers": {"intern": "302"}},
+    {"name": "Eva Smit", "group": "Financiën", "numbers": {"intern": "401", "direct": "+31 20 123 4401"}},
+    {"name": "Floris Meijer", "group": "Directie", "numbers": {"intern": "501", "mobiel": "+31 6 34567890"}}
+]
