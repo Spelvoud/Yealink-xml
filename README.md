@@ -13,6 +13,7 @@ elke webserver met PHP 8.0 of hoger en heeft geen database nodig.
 | Contact bellen | `contact.php` | `YealinkIPPhoneDirectory` |
 | Zoeken op naam of nummer | `search.php` | `YealinkIPPhoneInputScreen` |
 | Afdelingen | `groups.php` | `YealinkIPPhoneTextMenu` |
+| Parkeerplaatsen (call park) | `parking.php` | `YealinkIPPhoneDirectory` |
 | Datum, tijd en toestelinfo | `info.php` | `YealinkIPPhoneTextScreen` |
 | Remote phonebook | `remote-phonebook.php` | `YealinkIPPhoneBook` |
 
@@ -69,6 +70,44 @@ Webinterface → **Directory** → **Remote Phone Book**, of via provisioning:
 remote_phonebook.data.1.url = http://192.168.1.10/yealink/remote-phonebook.php
 remote_phonebook.data.1.name = Bedrijf
 ```
+
+## Parkeerplaatsen (parking lot)
+
+`parking.php` toont de parkeerplaatsen van de centrale. Kies een plaats en druk
+op **Ophalen** om het geparkeerde gesprek aan te nemen; de telefoon belt dan
+`pickup_prefix` + het nummer van de plaats. **Uitleg** laat zien hoe je een
+gesprek parkeert (Transfer naar `park_number`).
+
+Stel in `config.php` onder `parking` in:
+
+| Instelling | Standaard | Betekenis |
+|---|---|---|
+| `first_slot` / `slot_count` | `701` / `10` | Plaatsen 701 t/m 710 |
+| `park_number` | `700` | Nummer om naar door te verbinden om te parkeren |
+| `pickup_prefix` | leeg | Voorvoegsel voor ophalen, bv. `*88` |
+| `status_url` | leeg | Optionele JSON-bron met de bezetting |
+
+Zonder `status_url` worden alle plaatsen getoond zonder bezetting. Met
+`status_url` (een URL of een lokaal bestand) toont het scherm per plaats
+"vrij" of "bezet" en het aantal bezette plaatsen in de titel. Beide formaten
+werken:
+
+```json
+{"701": "Jan Jansen (0612345678)", "704": "+31201234567"}
+```
+
+```json
+["701", "704"]
+```
+
+Zo'n bron kun je bijvoorbeeld laten vullen door een script dat
+`asterisk -rx "parkedcalls show"` uitleest. Kan de bron niet gelezen worden,
+dan toont het scherm de plaatsen zonder bezetting.
+
+Tip: wil je bezetting live zien zonder `status_url`, zet dan op een paar
+lijntoetsen van de T48 een BLF naar een parkeerplaats (bv.
+`linekey.11.type = 16`, `linekey.11.value = 701`), mits je centrale BLF voor
+parkeerplaatsen ondersteunt.
 
 ## Testen
 

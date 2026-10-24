@@ -31,6 +31,8 @@ $cases = [
     'groups.php' => 'YealinkIPPhoneTextMenu',
     'info.php' => 'YealinkIPPhoneTextScreen',
     'remote-phonebook.php' => 'YealinkIPPhoneBook',
+    'parking.php' => 'YealinkIPPhoneDirectory',
+    'parking.php?help=1' => 'YealinkIPPhoneTextScreen',
 ];
 
 $failures = 0;
@@ -55,6 +57,38 @@ foreach ($cases as $path => $root) {
 $body = file_get_contents("http://127.0.0.1:$port/phonebook.php", false, $context);
 if (str_contains($body, 'Volgende')) {
     echo "FAIL paginering toont onterecht 'Volgende'\n";
+    $failures++;
+}
+
+// Parkeerplaatsen: standaard 701 t/m 710, ophalen door de plaats te bellen.
+$body = file_get_contents("http://127.0.0.1:$port/parking.php", false, $context);
+if (!str_contains($body, '<URI>701</URI>') || !str_contains($body, '<URI>710</URI>')
+    || str_contains($body, '<URI>711</URI>')) {
+    echo "FAIL parkeerplaatsen 701-710 niet correct\n";
+    $failures++;
+}
+
+// Bezetting uit status_url: object- en lijstformaat, en onleesbare bron.
+require_once dirname(__DIR__) . '/lib/Parking.php';
+$tmp = tempnam(sys_get_temp_dir(), 'park');
+$statusCases = [
+    ['{"701": "Jan Jansen", "704": "+31201234567"}', ['701' => 'Jan Jansen', '704' => '+31201234567']],
+    ['["702", 705]', ['702' => '', '705' => '']],
+    ['{}', []],
+    ['geen json', null],
+];
+foreach ($statusCases as [$json, $expected]) {
+    file_put_contents($tmp, $json);
+    $actual = parking_status($tmp);
+    $actual = $actual === null ? null : array_combine(array_map('strval', array_keys($actual)), $actual);
+    if ($actual !== $expected) {
+        echo "FAIL parking_status($json): ", var_export($actual, true), "\n";
+        $failures++;
+    }
+}
+unlink($tmp);
+if (parking_status('') !== null || parking_status('/bestaat/niet.json') !== null) {
+    echo "FAIL parking_status zonder bron moet null geven\n";
     $failures++;
 }
 

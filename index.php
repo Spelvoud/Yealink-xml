@@ -13,6 +13,7 @@ yl_send(yl_text_menu(
         ['Telefoonboek', yl_url('phonebook.php')],
         ['Zoek contact', yl_url('search.php')],
         ['Afdelingen', yl_url('groups.php')],
+        ['Parkeerplaatsen', yl_url('parking.php')],
         ['Informatie', yl_url('info.php')],
     ],
     [
