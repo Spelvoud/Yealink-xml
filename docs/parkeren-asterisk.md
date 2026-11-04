@@ -79,8 +79,15 @@ sip-peer, in de voorbeelden `[intern]`):
 include => parking-intern
 ```
 
-`parking-intern` bevat ook de extensie `park`. Die gebruikt de Park-softkey
-van de Cisco-toestellen om te weten in welke parking lot hij moet parkeren.
+`parking-intern` bevat ook de extensies voor de Cisco-toestellen, gebaseerd op
+de pagina *Dialplan Extensions* van usecallmanager.nz:
+
+- `_[x]-cisco-serviceuri-.` haalt het voorvoegsel `x-cisco-serviceuri-` van
+  Cisco-functies af. Staat die regel al in je dialplan, laat hem dan weg uit
+  `extensions_parking.conf`.
+- `park` gebruikt de Park-softkey om te parkeren.
+- `_dpark-.` parkeert een gesprek op een vaste plaats via de parkeertoetsen
+  (zie 4.2).
 
 Wil je kunnen parkeren met `#72`, voeg dan aan de `Dial()`-regels de opties
 `k` (de gebelde mag parkeren) en `K` (de beller mag parkeren) toe:
@@ -123,6 +130,7 @@ Neem per Cisco-peer in `sip.conf` de instellingen uit
 | `context = intern` | Context met `include => parking-intern` |
 | `subscribecontext = intern` | Hier zoekt Asterisk de hints van 701–710 voor de BLF-toetsen |
 | `allowsubscribe = yes` | BLF-abonnementen toestaan |
+| `subscribe = 701@parkedcalls,…` | Cisco-toestellen sturen zelf geen SUBSCRIBE voor BLF-lijntoetsen. Met `subscribe` stuurt Asterisk de status van die plaatsen toch naar het toestel. Zet hier alle plaatsen waarvoor het toestel een toets heeft |
 | `cisco = yes` | Zet de Cisco-functies van de patch aan, waaronder de Park-softkey. Oudere patchversies gebruiken `cisco_usecallmanager = yes` |
 | `parkinglot = default` | Parking lot uit `res_parking.conf` |
 | `parknotifytimer = 5` | Zo lang (seconden) toont het toestel "geparkeerd op 701" |
@@ -292,13 +300,14 @@ Voeg in `SEP<MAC>.cnf.xml` binnen `<sipLines>`, na je eigen lijn
 </line>
 ```
 
-- `featureID` `22` = BLF Directed Call Park. Het toestel neemt een
-  abonnement op het nummer in `<contact>` en toont alleen vrij of bezet.
-  Asterisk antwoordt met de hint `park:701@parkedcalls`.
+- `featureID` `22` = BLF Directed Call Park. Het lampje toont alleen vrij of
+  bezet. Het toestel vraagt de status niet zelf op: Asterisk stuurt hem door
+  de regel `subscribe = 701@parkedcalls,…` bij de peer in `sip.conf` (zie
+  1.5). Zonder die regel blijft het lampje uit.
 - **Plaats vrij en je zit in een gesprek**: het toestel verbindt het gesprek
-  blind door naar `x-cisco-serviceuri-dpark-701`. De extensie daarvoor staat
-  in `parking-intern` (`asterisk/extensions_parking.conf`) en parkeert het
-  gesprek precies op 701.
+  blind door naar `x-cisco-serviceuri-dpark-701`. De dialplan in
+  `parking-intern` maakt daar `dpark-701` van en parkeert het gesprek precies
+  op 701.
 - **Plaats bezet**: indrukken belt `701` en haalt het gesprek op.
   `<retrievalPrefix/>` blijft leeg, want bij Asterisk bel je de plaats zelf.
 - Herhaal voor 702, 703 enz., met `button="3"`, `"4"` …, zoveel als het
@@ -328,8 +337,8 @@ ophaalt.
 |---|---|
 | `700` geeft "nummer onbekend" | De context van het toestel bevat `include => parking-intern` niet, of `res_parking` is niet geladen (`module show like parking`) |
 | BLF-lampjes blijven uit of knipperen | Controleer `pjsip show subscriptions inbound` (Yealink) of `sip show subscriptions` (Cisco). De hint moet te vinden zijn in de context van het toestel, voor Cisco de `subscribecontext` (`dialplan show 701@intern`), en `parkinghints = yes` moet aan staan |
-| Cisco: parkeertoets verbindt door naar "nummer onbekend" | De extensie `x-cisco-serviceuri-dpark-7XX` ontbreekt in de context van de peer: controleer `include => parking-intern` en `dialplan show x-cisco-serviceuri-dpark-701@intern` |
-| Cisco: lampje van een parkeertoets blijft uit | `<contact>` ontbreekt bij de toets, of de hint staat niet in de `subscribecontext` van de peer |
+| Cisco: parkeertoets verbindt door naar "nummer onbekend" | De extensies `_[x]-cisco-serviceuri-.` en `_dpark-.` zijn niet te vinden vanuit de context van de peer: controleer `include => parking-intern` en `dialplan show dpark-701@intern` |
+| Cisco: lampje van een parkeertoets blijft uit | De regel `subscribe = 701@parkedcalls,…` ontbreekt bij de peer. Controleer met `sip show peer 201` of de abonnementen er staan; ze worden pas actief als het toestel geregistreerd is |
 | Cisco: Park-softkey ontbreekt | `softKeyFile` niet ingesteld, `SoftKeys.xml` niet op de TFTP-server, of het toestel is niet herstart |
 | Cisco: Park doet niets of geeft een fout | `cisco = yes` (of `cisco_usecallmanager = yes`) ontbreekt bij de peer, of de parking lot uit `park`/`parkinglot` bestaat niet. Kijk met `sip set debug peer 201` of er een REFER met `Park` binnenkomt |
 | `#72` doet niets | DTMF niet via RFC 2833/AVT, of de opties `k`/`K` ontbreken in `Dial()`. Test met `core set verbose 5` en kijk of Asterisk de DTMF ziet |
