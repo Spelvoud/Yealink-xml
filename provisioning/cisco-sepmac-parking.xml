@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Parkeerplaatsen voor Cisco-toestellen met SIP enterprise-firmware
+  (7900/8800/8900/9900-serie) op Asterisk met de usecallmanager.nz-patch.
+
+  Dit zijn fragmenten voor SEP<MAC>.cnf.xml en SoftKeys.xml (zie de
+  voorbeeldbestanden in https://github.com/usecallmanagernz/tftpboot).
+  Zet ze op de juiste plek in je eigen bestanden; dit bestand zelf laad je
+  niet in de telefoon.
+
+    Park-softkey  parkeren tijdens een gesprek; het scherm toont de plaats
+    701 - 710     parkeerplaatsen (BLF-toets indrukken = ophalen)
+-->
+<fragments>
+
+  <!-- 1. SEP<MAC>.cnf.xml, binnen <sipProfile><sipLines>, na je eigen lijn
+       (button 1). Eén <line> per parkeerplaats. featureID 21 = snelkeuze met
+       BLF. featureOptionMask 0: indrukken belt 701 (= ophalen); waarde 1 zou
+       er een BLF-pickup van maken, en dat werkt niet voor parkeerplaatsen. -->
+  <sipLines>
+    <line button="2">
+      <featureID>21</featureID>
+      <featureLabel>Park 701</featureLabel>
+      <speedDialNumber>701</speedDialNumber>
+      <featureOptionMask>0</featureOptionMask>
+    </line>
+    <line button="3">
+      <featureID>21</featureID>
+      <featureLabel>Park 702</featureLabel>
+      <speedDialNumber>702</speedDialNumber>
+      <featureOptionMask>0</featureOptionMask>
+    </line>
+    <line button="4">
+      <featureID>21</featureID>
+      <featureLabel>Park 703</featureLabel>
+      <speedDialNumber>703</speedDialNumber>
+      <featureOptionMask>0</featureOptionMask>
+    </line>
+    <!-- enz. tot en met 710, zoveel als het toestel (en KEM) toetsen heeft -->
+  </sipLines>
+
+  <!-- 2. SEP<MAC>.cnf.xml, binnen <sipProfile>: verwijs naar het
+       softkey-bestand (als dat nog niet zo is). -->
+  <softKeyFile>SoftKeys.xml</softKeyFile>
+
+  <!-- 3. SEP<MAC>.cnf.xml, binnen <vendorConfig>: na het parkeren blijft het
+       geparkeerde gesprek zichtbaar op het toestel van de parkeerder. -->
+  <callParkMonitor>1</callParkMonitor>
+
+  <!-- 4. SoftKeys.xml: de softkey Park in de set "Connected" (de definitie
+       <softKeyDef keyID="Park"> staat al in het voorbeeldbestand). -->
+  <softKeySet id="Connected">
+    <softKey keyID="Hold" />
+    <softKey keyID="EndCall" />
+    <softKey keyID="Transfer" />
+    <softKey keyID="Confrn" />
+    <softKey keyID="Park" />
+  </softKeySet>
+
+</fragments>

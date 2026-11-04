@@ -1,9 +1,19 @@
 # Parkeerplaatsen met Asterisk, Yealink en Cisco
 
-Deze handleiding zet een parking lot op in Asterisk (13 of hoger, met
-`res_parking` en PJSIP) en stelt Yealink- en Cisco-toestellen zo in dat
-iedereen gesprekken kan parkeren, zien welke plaatsen bezet zijn en een
-gesprek kan ophalen.
+Deze handleiding zet een parking lot op in Asterisk (met `res_parking`) en
+stelt Yealink- en Cisco-toestellen zo in dat iedereen gesprekken kan parkeren,
+zien welke plaatsen bezet zijn en een gesprek kan ophalen.
+
+Uitgangspunt:
+
+- **Yealink** meldt zich aan via PJSIP (of chan_sip, dat werkt ook).
+- **Cisco** heeft **SIP enterprise-firmware** en meldt zich aan via
+  **chan_sip met de [usecallmanager.nz](https://usecallmanager.nz)-patch**.
+  Die patch geeft de Cisco-toestellen een echte **Park**-softkey die de
+  parkeerplaats op het scherm toont, en BLF-lampjes op de lijntoetsen.
+
+Draaien chan_sip en PJSIP naast elkaar, geef ze dan elk een eigen poort (bv.
+chan_sip op 5060 voor Cisco en PJSIP op 5062 voor Yealink).
 
 | Nummer | Functie |
 |---|---|
@@ -21,10 +31,11 @@ Alle bestanden staan in deze repo:
 | `asterisk/res_parking.conf` | De parking lot zelf |
 | `asterisk/features.conf` | DTMF-code `#72` |
 | `asterisk/extensions_parking.conf` | Dialplan: parkeerplaatsen bereikbaar maken |
-| `asterisk/pjsip_parking.conf` | Instellingen per toestel (DTMF, BLF) |
+| `asterisk/pjsip_parking.conf` | Instellingen per Yealink-toestel (PJSIP) |
+| `asterisk/sip_cisco_parking.conf` | Instellingen per Cisco-toestel (chan_sip met patch) |
 | `asterisk/manager_parking.conf` | Optioneel: AMI-gebruiker voor de XML app |
 | `provisioning/yealink-parking.cfg` | Provisioning voor Yealink |
-| `provisioning/cisco-mpp-parking.xml` | Provisioning voor Cisco MPP |
+| `provisioning/cisco-sepmac-parking.xml` | Fragmenten voor `SEP<MAC>.cnf.xml` en `SoftKeys.xml` |
 
 ## 1. Asterisk instellen
 
@@ -60,13 +71,16 @@ Voeg in `/etc/asterisk/extensions.conf` toe:
 ```
 
 Kopieer `asterisk/extensions_parking.conf` naar `/etc/asterisk/` en zet in de
-context van je toestellen (de `context =` van het pjsip-endpoint, in de
-voorbeelden `[intern]`):
+context van je toestellen (de `context =` van het pjsip-endpoint of de
+sip-peer, in de voorbeelden `[intern]`):
 
 ```
 [intern]
 include => parking-intern
 ```
+
+`parking-intern` bevat ook de extensie `park`. Die gebruikt de Park-softkey
+van de Cisco-toestellen om te weten in welke parking lot hij moet parkeren.
 
 Wil je kunnen parkeren met `#72`, voeg dan aan de `Dial()`-regels de opties
 `k` (de gebelde mag parkeren) en `K` (de beller mag parkeren) toe:
@@ -88,7 +102,7 @@ asterisk -rx "module reload features"
 asterisk -rx "features show" | grep -i park
 ```
 
-### 1.4 Toestellen (PJSIP)
+### 1.4 Yealink-toestellen (PJSIP)
 
 Controleer per endpoint in `pjsip.conf` (zie `asterisk/pjsip_parking.conf`):
 
@@ -98,7 +112,31 @@ Controleer per endpoint in `pjsip.conf` (zie `asterisk/pjsip_parking.conf`):
 
 Herlaad met `asterisk -rx "pjsip reload"`.
 
-### 1.5 Optioneel: live bezetting in de Yealink XML app
+### 1.5 Cisco-toestellen (chan_sip met usecallmanager.nz-patch)
+
+Neem per Cisco-peer in `sip.conf` de instellingen uit
+`asterisk/sip_cisco_parking.conf` over (of gebruik de template
+`[cisco-parking](!)`):
+
+| Instelling | Waarom |
+|---|---|
+| `context = intern` | Context met `include => parking-intern` |
+| `subscribecontext = intern` | Hier zoekt Asterisk de hints van 701–710 voor de BLF-toetsen |
+| `allowsubscribe = yes` | BLF-abonnementen toestaan |
+| `cisco = yes` | Zet de Cisco-functies van de patch aan, waaronder de Park-softkey. Oudere patchversies gebruiken `cisco_usecallmanager = yes` |
+| `parkinglot = default` | Parking lot uit `res_parking.conf` |
+| `parknotifytimer = 5` | Zo lang (seconden) toont het toestel "geparkeerd op 701" |
+| `dtmfmode = rfc2833` | Alleen nodig als je ook `#72` wilt gebruiken |
+
+Herlaad met `asterisk -rx "sip reload"` en controleer met
+`asterisk -rx "sip show peer 201"` dat `Parkinglot` op `default` staat.
+
+Met de patch kun je in `res_parking.conf` ook `remindertime` aanzetten: het
+Cisco-toestel van wie parkeerde herinnert dan na die tijd aan het gesprek.
+Deze optie staat uitgecommentarieerd, omdat `res_parking` niet laadt als je
+patchversie de optie niet kent.
+
+### 1.6 Optioneel: live bezetting in de Yealink XML app
 
 `parking.php` kan per plaats "vrij" of "bezet: Jan Jansen (0612345678)"
 tonen. Daarvoor vraagt de app de bezetting op bij de Asterisk Manager
@@ -122,7 +160,7 @@ het adres van Asterisk en zet het adres van de webserver in `permit`. Zet AMI
 (poort 5038) nooit open naar internet. Is AMI niet bereikbaar, dan toont de app
 de plaatsen gewoon zonder bezetting.
 
-### 1.6 Testen vanaf de Asterisk-console
+### 1.7 Testen vanaf de Asterisk-console
 
 ```sh
 asterisk -rvvv
@@ -192,60 +230,94 @@ Controleer onder **Account → Advanced** dat **DTMF Type** op `RFC2833` staat.
   dialplan), gebruik dan het alternatief onderaan `yealink-parking.cfg`: een
   toets van het type `Transfer` naar `700`.
 
-## 4. Cisco instellen
+## 4. Cisco instellen (SIP enterprise-firmware)
 
-Deze instructies gelden voor Cisco IP Phone 6800, 7800 en 8800 met
-**multiplatform-firmware (MPP / 3PCC)**, de firmware waarmee Cisco-toestellen
-zich bij Asterisk aanmelden. De oudere SPA 300/500-serie gebruikt dezelfde
-instellingen (BLF via de lijntoetsen of de attendant console).
+Dit geldt voor Cisco-toestellen met SIP enterprise-firmware die via de
+usecallmanager.nz-patch op Asterisk draaien (bv. 7942/7962, 7945/7965, 8841,
+8851, 8861, 8945, 9971). Je stelt ze in via de bestanden op je TFTP-server:
+`SEP<MAC>.cnf.xml` per toestel en een gedeeld `SoftKeys.xml`. Gebruik als
+basis de voorbeeldbestanden uit
+[usecallmanagernz/tftpboot](https://github.com/usecallmanagernz/tftpboot).
 
-> Toestellen met **enterprise-firmware** (CUCM, `SEP<mac>.cnf.xml`) ondersteunen
-> geen BLF op deze manier. Op die toestellen werkt parkeren met **Transfer**
-> naar `700` of `#72`, en ophalen door het plaatsnummer te bellen (zie stap 2).
+Alle fragmenten staan in `provisioning/cisco-sepmac-parking.xml`.
 
-### 4.1 Via provisioning
+### 4.1 Park-softkey
 
-Neem de elementen uit `provisioning/cisco-mpp-parking.xml` over in het
-profiel van het toestel. Lijntoets 1 blijft je eigen lijn; de voorbeelden
-gebruiken toets 2 t/m 4 voor plaats 701 t/m 703. Een 7841 heeft 4
-lijntoetsen, een 8851/8861 heeft er 10; voor meer plaatsen gebruik je een
-uitbreidingsmodule (KEM).
+1. Zorg dat `SoftKeys.xml` op de TFTP-server staat en dat
+   `SEP<MAC>.cnf.xml` ernaar verwijst, binnen `<sipProfile>`:
 
-### 4.2 Via de webinterface
+   ```xml
+   <softKeyFile>SoftKeys.xml</softKeyFile>
+   ```
 
-Open `http://<ip-van-de-telefoon>/admin/advanced` (**Admin Login → advanced**).
+2. Zet in `SoftKeys.xml` de softkey `Park` in de set `Connected` (in het
+   voorbeeldbestand staat hij er al):
 
-1. **DTMF**: **Voice → Ext 1 → Audio Configuration → DTMF Tx Method** = `AVT`.
-2. **BLF per plaats**: **Voice → Phone → Line Key 2**:
-   - Extension: `Disabled`
-   - Short Name: `Park 701`
-   - Extended Function: `fnc=blf+sd;sub=701@$PROXY;ext=701@$PROXY;nme=Park 701`
+   ```xml
+   <softKeySet id="Connected">
+     <softKey keyID="Hold" />
+     <softKey keyID="EndCall" />
+     <softKey keyID="Transfer" />
+     <softKey keyID="Confrn" />
+     <softKey keyID="Park" />
+   </softKeySet>
+   ```
 
-   Herhaal voor de andere toetsen en plaatsen.
-3. **Park-softkey**: **Voice → Phone → Programmable Softkeys**:
-   - Programmable Softkey Enable: `Yes`
-   - PSK 1: `fnc=dtmf;ext=#72;nme=Park`
-   - Voeg `psk1` toe aan **Connected Key List**, bv.
-     `hold|endcall|xfer|conf|bxfer|psk1`
+3. Optioneel: zet binnen `<vendorConfig>` in `SEP<MAC>.cnf.xml`
 
-   Gebruik deze PSK in plaats van de ingebouwde softkey `park`: die volgt de
-   parkeermethode van BroadWorks en werkt met Asterisk meestal niet goed.
-4. Klik op **Submit All Changes**; de telefoon herstart.
+   ```xml
+   <callParkMonitor>1</callParkMonitor>
+   ```
+
+   Dan blijft het geparkeerde gesprek zichtbaar op het toestel van wie
+   parkeerde, met een melding als het wordt opgehaald of terugkomt.
+
+Wat er gebeurt: de telefoon stuurt bij **Park** een verzoek naar Asterisk. De
+patch parkeert de andere partij in de parking lot uit de extensie `park` (of
+uit `parkinglot` van de peer) en stuurt de plaats terug, die het toestel
+`parknotifytimer` seconden in beeld toont.
+
+### 4.2 BLF-toetsen per parkeerplaats
+
+Voeg in `SEP<MAC>.cnf.xml` binnen `<sipLines>`, na je eigen lijn
+(`button="1"`), per parkeerplaats een snelkeuzetoets met BLF toe:
+
+```xml
+<line button="2">
+  <featureID>21</featureID>
+  <featureLabel>Park 701</featureLabel>
+  <speedDialNumber>701</speedDialNumber>
+  <featureOptionMask>0</featureOptionMask>
+</line>
+```
+
+- `featureID` `21` = snelkeuze met BLF. Het toestel neemt een abonnement op
+  `701`; Asterisk antwoordt met de hint `park:701@parkedcalls`.
+- `featureOptionMask` `0`: indrukken belt `701` en haalt het gesprek dus op.
+  Met `1` wordt het een BLF-pickup-toets voor overgaande toestellen; dat werkt
+  niet voor parkeerplaatsen.
+- Herhaal voor 702, 703 enz., met `button="3"`, `"4"` …, zoveel als het
+  toestel (plus eventuele KEM) toetsen heeft.
+
+Herstart het toestel zodat het de nieuwe bestanden van de TFTP-server
+ophaalt.
 
 ### 4.3 Gebruik
 
-- **Parkeren**: druk tijdens het gesprek op de softkey **Park** (eventueel via
-  **Meer**). Je hoort de plaats en je kant van het gesprek wordt verbroken.
-  Zonder softkey: **Transfer**, `700`, plaats beluisteren, **Transfer**.
-- **Ophalen**: druk op de rode lijntoets van de plaats, of bel het nummer van
-  de plaats.
+- **Parkeren**: druk tijdens het gesprek op **Park** (eventueel via
+  **Meer**). Het scherm toont de plaats, bv. 701, en jouw kant van het
+  gesprek wordt verbroken. Het lampje van die plaats wordt rood.
+- **Ophalen**: druk op de rode toets van de plaats, of bel het nummer.
+- **Zonder softkey**: **Transfer**, `700`, plaats beluisteren, **Transfer**.
 
 ## 5. Problemen oplossen
 
 | Probleem | Oorzaak en oplossing |
 |---|---|
 | `700` geeft "nummer onbekend" | De context van het toestel bevat `include => parking-intern` niet, of `res_parking` is niet geladen (`module show like parking`) |
-| BLF-lampjes blijven uit of knipperen | Controleer `pjsip show subscriptions inbound`; de hint moet in de context van het toestel te vinden zijn (`dialplan show 701@intern`) en `parkinghints = yes` moet aan staan |
+| BLF-lampjes blijven uit of knipperen | Controleer `pjsip show subscriptions inbound` (Yealink) of `sip show subscriptions` (Cisco). De hint moet te vinden zijn in de context van het toestel, voor Cisco de `subscribecontext` (`dialplan show 701@intern`), en `parkinghints = yes` moet aan staan |
+| Cisco: Park-softkey ontbreekt | `softKeyFile` niet ingesteld, `SoftKeys.xml` niet op de TFTP-server, of het toestel is niet herstart |
+| Cisco: Park doet niets of geeft een fout | `cisco = yes` (of `cisco_usecallmanager = yes`) ontbreekt bij de peer, of de parking lot uit `park`/`parkinglot` bestaat niet. Kijk met `sip set debug peer 201` of er een REFER met `Park` binnenkomt |
 | `#72` doet niets | DTMF niet via RFC 2833/AVT, of de opties `k`/`K` ontbreken in `Dial()`. Test met `core set verbose 5` en kijk of Asterisk de DTMF ziet |
 | Ophalen geeft stilte of ophangen | De plaats is leeg (al opgehaald of teruggestuurd na de parkeertijd) |
 | XML app toont geen bezetting | Test AMI met `telnet 127.0.0.1 5038`; controleer gebruiker, wachtwoord, `permit` en `write = call` in `manager.conf` |

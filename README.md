@@ -115,7 +115,9 @@ bezetting.
 In `asterisk/` staat een complete parking lot-configuratie voor Asterisk
 (`res_parking.conf`, dialplan, `#72` om te parkeren, AMI-gebruiker) en in
 `provisioning/` de instellingen voor Yealink (`yealink-parking.cfg`) en Cisco
-MPP (`cisco-mpp-parking.xml`): een BLF-toets per plaats en een Park-toets. De
+met SIP enterprise-firmware op chan_sip met de usecallmanager.nz-patch
+(`cisco-sepmac-parking.xml`, `asterisk/sip_cisco_parking.conf`): een BLF-toets
+per plaats en een Park-toets. De
 stap-voor-stap uitleg staat in
 [docs/parkeren-asterisk.md](docs/parkeren-asterisk.md).
 
