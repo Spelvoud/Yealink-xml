@@ -277,38 +277,50 @@ patch parkeert de andere partij in de parking lot uit de extensie `park` (of
 uit `parkinglot` van de peer) en stuurt de plaats terug, die het toestel
 `parknotifytimer` seconden in beeld toont.
 
-### 4.2 BLF-toetsen per parkeerplaats
+### 4.2 Parkeertoetsen per plaats (BLF Directed Call Park)
 
 Voeg in `SEP<MAC>.cnf.xml` binnen `<sipLines>`, na je eigen lijn
-(`button="1"`), per parkeerplaats een snelkeuzetoets met BLF toe:
+(`button="1"`), per parkeerplaats een toets toe:
 
 ```xml
 <line button="2">
-  <featureID>21</featureID>
+  <featureID>22</featureID>
   <featureLabel>Park 701</featureLabel>
   <speedDialNumber>701</speedDialNumber>
-  <featureOptionMask>0</featureOptionMask>
+  <contact>701</contact>
+  <retrievalPrefix/>
 </line>
 ```
 
-- `featureID` `21` = snelkeuze met BLF. Het toestel neemt een abonnement op
-  `701`; Asterisk antwoordt met de hint `park:701@parkedcalls`.
-- `featureOptionMask` `0`: indrukken belt `701` en haalt het gesprek dus op.
-  Met `1` wordt het een BLF-pickup-toets voor overgaande toestellen; dat werkt
-  niet voor parkeerplaatsen.
+- `featureID` `22` = BLF Directed Call Park. Het toestel neemt een
+  abonnement op het nummer in `<contact>` en toont alleen vrij of bezet.
+  Asterisk antwoordt met de hint `park:701@parkedcalls`.
+- **Plaats vrij en je zit in een gesprek**: het toestel verbindt het gesprek
+  blind door naar `x-cisco-serviceuri-dpark-701`. De extensie daarvoor staat
+  in `parking-intern` (`asterisk/extensions_parking.conf`) en parkeert het
+  gesprek precies op 701.
+- **Plaats bezet**: indrukken belt `701` en haalt het gesprek op.
+  `<retrievalPrefix/>` blijft leeg, want bij Asterisk bel je de plaats zelf.
 - Herhaal voor 702, 703 enz., met `button="3"`, `"4"` …, zoveel als het
   toestel (plus eventuele KEM) toetsen heeft.
+
+Alleen een lampje zonder parkeerfunctie kan ook: gebruik dan `featureID` `21`
+(snelkeuze met BLF) met `<featureOptionMask>0</featureOptionMask>`, ook met
+`<speedDialNumber>` en `<contact>`. Met mask `1` probeert de toets gesprekken
+van andere toestellen over te nemen; dat werkt niet voor parkeerplaatsen.
 
 Herstart het toestel zodat het de nieuwe bestanden van de TFTP-server
 ophaalt.
 
 ### 4.3 Gebruik
 
-- **Parkeren**: druk tijdens het gesprek op **Park** (eventueel via
-  **Meer**). Het scherm toont de plaats, bv. 701, en jouw kant van het
-  gesprek wordt verbroken. Het lampje van die plaats wordt rood.
+- **Parkeren op een vaste plaats**: druk tijdens het gesprek op een groene
+  (vrije) toets, bv. **Park 701**. Het gesprek staat op 701 en het lampje
+  wordt rood.
+- **Parkeren op een vrije plaats**: druk tijdens het gesprek op de softkey
+  **Park** (eventueel via **Meer**). Het scherm toont de plaats, bv. 703.
 - **Ophalen**: druk op de rode toets van de plaats, of bel het nummer.
-- **Zonder softkey**: **Transfer**, `700`, plaats beluisteren, **Transfer**.
+- **Zonder toetsen**: **Transfer**, `700`, plaats beluisteren, **Transfer**.
 
 ## 5. Problemen oplossen
 
@@ -316,6 +328,8 @@ ophaalt.
 |---|---|
 | `700` geeft "nummer onbekend" | De context van het toestel bevat `include => parking-intern` niet, of `res_parking` is niet geladen (`module show like parking`) |
 | BLF-lampjes blijven uit of knipperen | Controleer `pjsip show subscriptions inbound` (Yealink) of `sip show subscriptions` (Cisco). De hint moet te vinden zijn in de context van het toestel, voor Cisco de `subscribecontext` (`dialplan show 701@intern`), en `parkinghints = yes` moet aan staan |
+| Cisco: parkeertoets verbindt door naar "nummer onbekend" | De extensie `x-cisco-serviceuri-dpark-7XX` ontbreekt in de context van de peer: controleer `include => parking-intern` en `dialplan show x-cisco-serviceuri-dpark-701@intern` |
+| Cisco: lampje van een parkeertoets blijft uit | `<contact>` ontbreekt bij de toets, of de hint staat niet in de `subscribecontext` van de peer |
 | Cisco: Park-softkey ontbreekt | `softKeyFile` niet ingesteld, `SoftKeys.xml` niet op de TFTP-server, of het toestel is niet herstart |
 | Cisco: Park doet niets of geeft een fout | `cisco = yes` (of `cisco_usecallmanager = yes`) ontbreekt bij de peer, of de parking lot uit `park`/`parkinglot` bestaat niet. Kijk met `sip set debug peer 201` of er een REFER met `Park` binnenkomt |
 | `#72` doet niets | DTMF niet via RFC 2833/AVT, of de opties `k`/`K` ontbreken in `Dial()`. Test met `core set verbose 5` en kijk of Asterisk de DTMF ziet |

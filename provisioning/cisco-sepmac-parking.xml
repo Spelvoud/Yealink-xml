@@ -8,33 +8,37 @@
   Zet ze op de juiste plek in je eigen bestanden; dit bestand zelf laad je
   niet in de telefoon.
 
-    Park-softkey  parkeren tijdens een gesprek; het scherm toont de plaats
-    701 - 710     parkeerplaatsen (BLF-toets indrukken = ophalen)
+    Park-softkey  parkeren op een vrije plaats; het scherm toont de plaats
+    701 - 710     toets per plaats: vrij = hier parkeren, bezet = ophalen
 -->
 <fragments>
 
   <!-- 1. SEP<MAC>.cnf.xml, binnen <sipProfile><sipLines>, na je eigen lijn
-       (button 1). Eén <line> per parkeerplaats. featureID 21 = snelkeuze met
-       BLF. featureOptionMask 0: indrukken belt 701 (= ophalen); waarde 1 zou
-       er een BLF-pickup van maken, en dat werkt niet voor parkeerplaatsen. -->
+       (button 1). Eén <line> per parkeerplaats. featureID 22 = BLF Directed
+       Call Park: lampje vrij/bezet; vrij + in gesprek = parkeren op deze
+       plaats (blind doorverbinden naar x-cisco-serviceuri-dpark-701, zie
+       asterisk/extensions_parking.conf); bezet = 701 bellen (ophalen). -->
   <sipLines>
     <line button="2">
-      <featureID>21</featureID>
+      <featureID>22</featureID>
       <featureLabel>Park 701</featureLabel>
       <speedDialNumber>701</speedDialNumber>
-      <featureOptionMask>0</featureOptionMask>
+      <contact>701</contact>
+      <retrievalPrefix/>
     </line>
     <line button="3">
-      <featureID>21</featureID>
+      <featureID>22</featureID>
       <featureLabel>Park 702</featureLabel>
       <speedDialNumber>702</speedDialNumber>
-      <featureOptionMask>0</featureOptionMask>
+      <contact>702</contact>
+      <retrievalPrefix/>
     </line>
     <line button="4">
-      <featureID>21</featureID>
+      <featureID>22</featureID>
       <featureLabel>Park 703</featureLabel>
       <speedDialNumber>703</speedDialNumber>
-      <featureOptionMask>0</featureOptionMask>
+      <contact>703</contact>
+      <retrievalPrefix/>
     </line>
     <!-- enz. tot en met 710, zoveel als het toestel (en KEM) toetsen heeft -->
   </sipLines>
