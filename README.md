@@ -33,8 +33,8 @@ elke webserver met PHP 8.0 of hoger en heeft geen database nodig.
    ```
 
    Gebruikt je server Apache, dan blokkeren de `.htaccess`-bestanden directe
-   toegang tot `data/`, `lib/` en `tests/`. Bij nginx doe je dit met een
-   `location`-regel.
+   toegang tot `data/`, `lib/`, `tests/`, `asterisk/` en `provisioning/`.
+   Bij nginx doe je dit met een `location`-regel.
 
 Lokaal uitproberen kan met de ingebouwde PHP-server:
 
@@ -85,7 +85,7 @@ Stel in `config.php` onder `parking` in:
 | `first_slot` / `slot_count` | `701` / `10` | Plaatsen 701 t/m 710 |
 | `park_number` | `700` | Nummer om naar door te verbinden om te parkeren |
 | `pickup_prefix` | leeg | Voorvoegsel voor ophalen, bv. `*88` |
-| `status_url` | leeg | Optionele JSON-bron met de bezetting |
+| `status_url` | leeg | Optionele bron met de bezetting (JSON of `ami://`) |
 
 Zonder `status_url` worden alle plaatsen getoond zonder bezetting. Met
 `status_url` (een URL of een lokaal bestand) toont het scherm per plaats
@@ -100,9 +100,24 @@ werken:
 ["701", "704"]
 ```
 
-Zo'n bron kun je bijvoorbeeld laten vullen door een script dat
-`asterisk -rx "parkedcalls show"` uitleest. Kan de bron niet gelezen worden,
-dan toont het scherm de plaatsen zonder bezetting.
+Met Asterisk kan de bezetting ook live via de Asterisk Manager Interface
+(AMI), inclusief naam en nummer van de geparkeerde beller:
+
+```php
+'status_url' => 'ami://yealink-parking:wachtwoord@127.0.0.1:5038/default',
+```
+
+Kan de bron niet gelezen worden, dan toont het scherm de plaatsen zonder
+bezetting.
+
+### Asterisk, Yealink en Cisco
+
+In `asterisk/` staat een complete parking lot-configuratie voor Asterisk
+(`res_parking.conf`, dialplan, `#72` om te parkeren, AMI-gebruiker) en in
+`provisioning/` de instellingen voor Yealink (`yealink-parking.cfg`) en Cisco
+MPP (`cisco-mpp-parking.xml`): een BLF-toets per plaats en een Park-toets. De
+stap-voor-stap uitleg staat in
+[docs/parkeren-asterisk.md](docs/parkeren-asterisk.md).
 
 Tip: wil je bezetting live zien zonder `status_url`, zet dan op een paar
 lijntoetsen van de T48 een BLF naar een parkeerplaats (bv.

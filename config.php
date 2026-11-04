@@ -34,8 +34,10 @@ return [
         // Leeg = het nummer van de parkeerplaats zelf bellen (bv. FreePBX).
         'pickup_prefix' => '',
 
-        // Optioneel: URL of bestand met de bezetting in JSON, bv.
-        // {"701": "Jan Jansen (0612345678)", "704": "+31201234567"}.
+        // Optioneel: bron van de bezetting. Een URL of bestand met JSON, bv.
+        // {"701": "Jan Jansen (0612345678)", "704": "+31201234567"}, of
+        // live uit Asterisk via AMI (zie asterisk/manager_parking.conf):
+        // 'ami://gebruiker:wachtwoord@127.0.0.1:5038/default'.
         // Leeg = geen bezetting tonen.
         'status_url' => '',
     ],

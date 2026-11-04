@@ -92,5 +92,28 @@ if (parking_status('') !== null || parking_status('/bestaat/niet.json') !== null
     $failures++;
 }
 
+// Bezetting via de Asterisk Manager Interface (ami://), met een nep-server.
+$amiPort = 8766;
+$ami = proc_open([PHP_BINARY, __DIR__ . '/fake-ami.php', (string) $amiPort, 'geheim'], [], $amiPipes);
+for ($i = 0; $i < 50 && !@fsockopen('127.0.0.1', $amiPort); $i++) {
+    usleep(100000);
+}
+$amiCases = [
+    'geheim' => ['701' => 'Jan Jansen (0612345678)', '704' => '+31201234567'],
+    'fout' => null, // verkeerd wachtwoord
+];
+foreach ($amiCases as $secret => $expected) {
+    $actual = parking_status("ami://yealink:$secret@127.0.0.1:$amiPort/default");
+    if ($actual !== $expected) {
+        echo "FAIL parking_status(ami, $secret): ", var_export($actual, true), "\n";
+        $failures++;
+    }
+}
+proc_terminate($ami);
+if (parking_status('ami://yealink:geheim@127.0.0.1:1/default') !== null) {
+    echo "FAIL parking_status met onbereikbare AMI moet null geven\n";
+    $failures++;
+}
+
 echo $failures ? "\n$failures test(s) mislukt\n" : "\nAlle tests geslaagd\n";
 exit($failures ? 1 : 0);
