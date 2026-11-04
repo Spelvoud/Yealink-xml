@@ -280,6 +280,16 @@ Alle fragmenten staan in `provisioning/cisco-sepmac-parking.xml`.
    Dan blijft het geparkeerde gesprek zichtbaar op het toestel van wie
    parkeerde, met een melding als het wordt opgehaald of terugkomt.
 
+Liever een vaste toets dan een softkey? Gebruik dan een lijntoets met
+`featureID` `126`. Die doet hetzelfde als de softkey:
+
+```xml
+<line button="5">
+  <featureID>126</featureID>
+  <featureLabel>Park</featureLabel>
+</line>
+```
+
 Wat er gebeurt: de telefoon stuurt bij **Park** een verzoek naar Asterisk. De
 patch parkeert de andere partij in de parking lot uit de extensie `park` (of
 uit `parkinglot` van de peer) en stuurt de plaats terug, die het toestel
@@ -313,10 +323,17 @@ Voeg in `SEP<MAC>.cnf.xml` binnen `<sipLines>`, na je eigen lijn
 - Herhaal voor 702, 703 enz., met `button="3"`, `"4"` …, zoveel als het
   toestel (plus eventuele KEM) toetsen heeft.
 
+Volgens de Line Keys-pagina van usecallmanager.nz heeft elke BLF-toets twee
+dingen nodig: een `hint` in de dialplan en een `subscribe`-regel in
+`sip.conf`. De hints maakt Asterisk zelf aan (`parkinghints = yes` in
+`res_parking.conf`); de `subscribe`-regels staan in
+`asterisk/sip_cisco_parking.conf`.
+
 Alleen een lampje zonder parkeerfunctie kan ook: gebruik dan `featureID` `21`
-(snelkeuze met BLF) met `<featureOptionMask>0</featureOptionMask>`, ook met
-`<speedDialNumber>` en `<contact>`. Met mask `1` probeert de toets gesprekken
-van andere toestellen over te nemen; dat werkt niet voor parkeerplaatsen.
+(BLF Speed Dial) zonder `featureOptionMask`, met `<speedDialNumber>` en
+`<contact>`. Met mask `1` belt de toets `x-cisco-serviceuri-blfpickup-701`
+om een overgaand gesprek over te nemen; dat werkt niet voor
+parkeerplaatsen.
 
 Herstart het toestel zodat het de nieuwe bestanden van de TFTP-server
 ophaalt.
@@ -327,7 +344,8 @@ ophaalt.
   (vrije) toets, bv. **Park 701**. Het gesprek staat op 701 en het lampje
   wordt rood.
 - **Parkeren op een vrije plaats**: druk tijdens het gesprek op de softkey
-  **Park** (eventueel via **Meer**). Het scherm toont de plaats, bv. 703.
+  **Park** (eventueel via **Meer**) of op de Park-lijntoets. Het scherm toont
+  de plaats, bv. 703.
 - **Ophalen**: druk op de rode toets van de plaats, of bel het nummer.
 - **Zonder toetsen**: **Transfer**, `700`, plaats beluisteren, **Transfer**.
 

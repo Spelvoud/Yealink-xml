@@ -41,10 +41,18 @@
       <retrievalPrefix/>
     </line>
     <!-- enz. tot en met 710, zoveel als het toestel (en KEM) toetsen heeft -->
+
+    <!-- Optioneel: Park als lijntoets (featureID 126) in plaats van, of naast,
+         de softkey. Parkeert op een vrije plaats, net als de softkey. -->
+    <line button="5">
+      <featureID>126</featureID>
+      <featureLabel>Park</featureLabel>
+    </line>
   </sipLines>
 
   <!-- 2. SEP<MAC>.cnf.xml, binnen <sipProfile>: verwijs naar het
-       softkey-bestand (als dat nog niet zo is). -->
+       softkey-bestand (als dat nog niet zo is). Alleen nodig voor de
+       Park-softkey. -->
   <softKeyFile>SoftKeys.xml</softKeyFile>
 
   <!-- 3. SEP<MAC>.cnf.xml, binnen <vendorConfig>: na het parkeren blijft het
